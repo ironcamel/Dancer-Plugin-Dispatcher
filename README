@@ -1,0 +1,35 @@
+NAME
+    Dancer::Plugin::Dispatcher - Simple yet Powerful Controller Class dispatcher for Dancer
+
+DESCRIPTION
+    This Dancer plugin provides a simple mechanism for dispatching code in
+    controller classes which allows you to better seperate and compartmentalize
+    your Dancer application. This plugin is a great building block towards giving
+    your Dancer application an MVC architecture.
+    
+    Some of the benefits include code-reuse, compartmentalization, and better
+    chaining of actions.
+
+        use Dancer qw/:syntax/;
+	use Dancer::Plugin::Dispatcher;
+    
+	get '/' 	 => dispatch '#index';
+	get '/login' 	 => dispatch '#login';
+	get '/dashboard' => dispatch '#check_session', '#dashboard';
+	
+	dance;
+
+APPLICATION CONFIGURATION (optional)
+    plugins:
+        Dispatcher:
+            base: MyApp::Controller
+    
+AUTHOR
+    Al Newkirk <awncorp@cpan.org>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2010 by awncorp.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+    
