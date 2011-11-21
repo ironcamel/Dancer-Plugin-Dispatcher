@@ -152,7 +152,6 @@ sub dispatcher {
         # format the shortcut
         my ($class, $action) = split /#/, $shortcut;
         if ($class) {
-            warn $class;
             # run through the filters
             $class = ucfirst $class;
             $class =~ s/([a-z])\-([a-z])/$1::\u$2/gpi;

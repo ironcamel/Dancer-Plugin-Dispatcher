@@ -1,21 +1,21 @@
 package MyAppAuto;
 
-use Dancer ':syntax';
+BEGIN {
+    use Dancer ':syntax';
+    set plugins => {
+        Dispatcher => {
+            base   => 'MyApp',
+            routes => [
+                "get /index          > #index",
+                "get /download/:file > resource#dlfile",
+                "get /chainsaw       > #setup resource#chainsaw",
+                "get /redirect       > #switch resource#dlfile"
+            ]
+        }
+    };
+}
+
 use Dancer::Plugin::Dispatcher;
-
-set plugins => {
-    Dispatcher => {
-        base   => 'MyApp',
-        routes => [
-            "get /index          > #index",
-            "get /download/:file > resource#dlfile",
-            "get /chainsaw       > #setup resource#chainsaw",
-            "get /redirect       > #switch resource#dlfile"
-        ]
-    }
-};
-
-dispatch_auto;
 
 sub index {
     'Hello World';
