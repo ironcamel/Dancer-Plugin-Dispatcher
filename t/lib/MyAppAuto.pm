@@ -6,10 +6,11 @@ BEGIN {
         Dispatcher => {
             base   => 'MyApp',
             routes => [
-                "get /index          > #index",
-                "get /download/:file > resource#dlfile",
-                "get /chainsaw       > #setup resource#chainsaw",
-                "get /redirect       > #switch resource#dlfile"
+                "get      /index          > #index",
+                "get      /download/:file > resource#dlfile",
+                "get      /chainsaw       > #setup resource#chainsaw",
+                "get      /redirect       > #switch resource#dlfile",
+                "get,post /               > #index",
             ]
         }
     };

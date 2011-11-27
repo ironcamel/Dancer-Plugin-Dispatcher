@@ -1,6 +1,6 @@
 #!perl
 
-use Test::More tests => 5, import => ['!pass'];
+use Test::More tests => 7, import => ['!pass'];
 use Dancer::Test;
 
 BEGIN {
@@ -8,6 +8,12 @@ BEGIN {
     use lib "$FindBin::Bin/lib";
     use_ok 'MyAppAuto';
 }
+
+response_content_is [GET => '/'], 
+    'Hello World', '/ returned Hello World';
+    
+response_content_is [POST => '/'], 
+    'Hello World', '/ returned Hello World';
 
 response_content_is [GET => '/index'], 
     'Hello World', '/index returned Hello World';
