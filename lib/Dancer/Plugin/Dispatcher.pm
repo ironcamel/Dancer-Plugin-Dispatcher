@@ -25,13 +25,14 @@ package Dancer::Plugin::Dispatcher;
 =head1 DESCRIPTION
 
 This Dancer plugin provides a simple mechanism for dispatching code in
-controller classes which allows you to better seperate and compartmentalize
+controller classes which allows you to better separate and compartmentalize
 your Dancer application. This plugin is a great building block towards giving
 your Dancer application an MVC architecture.
 
 =head1 CONFIGURATION
 
-Configuration details will be optionally grabbed from your L<Dancer> config file.
+Configuration details will be optionally grabbed from your L<Dancer> config file
+although no configuration is neccessary.
 For example: 
 
     plugins:
@@ -53,9 +54,9 @@ For example:
         base: MyApp::Controller
         routes:
           - "any / > #index"
-          - "get /login > #login"
-          - "get /dashboard > #check_session #dashboard"
-          - "get,post /form > #etc"
+          - "get /dashboard > #check_session,#dashboard"
+          - "get,post /login > #login"
+          - "get,post /logout > #logout"
 
 =head1 METHODS
 
@@ -66,7 +67,7 @@ controller and action (package and sub-routine). The coderef returned wraps that
 package and sub-routine to be executed by Dancer. The following is the shortcut
 translation map:
 
-    The '#' character is used to seperate the controller and action, same as
+    The '#' character is used to separate the controller and action, same as
     RoR and Mojolicious, e.g. (controller#action).
     
     dispatch '#index'; -> Dispatches main->index or MyApp::Controller->index
@@ -84,21 +85,21 @@ translation map:
 Another benefit in using this plugin is a better method of chaining actions.
 The current method of chaining suggests that you create a catch-all* route
 which you then you to perform some actions then pass the request to the next
-matching route forcing you to use mega-splat and reparse routes to find the next
-match.
+matching route forcing you to use mega-splat and re-parse routes to find the
+next match.
 
-Chaining actions with this plugin only requires you to supply multiple shartcuts
+Chaining actions with this plugin only requires you to supply multiple shortcuts
 to the dispatch keyword:
 
     get '/secured' => dispatch '#chkdomain', '#chksession', '#secured';
     
     sub chkdomain {
-        return undef unless ! param(domain);
+        return undef if param(domain);
         return 'Chain broken, domain is missing!';
     }
     
     sub chksession {
-        return undef unless ! session('user');
+        return undef if session('user');
         return redirect '/'; # maybe flash session timed-out message
     }
     
@@ -215,7 +216,7 @@ sub auto_dispatcher {
         my ($m, $r, $s) = $route =~ $re;
         foreach my $m (split /,/, $m) {
             if ($m && $r && $s) {
-                my $c = dispatcher(split(/\s/, $s));
+                my $c = dispatcher(split(/[\s,]/, $s));
                 if ($m eq 'get') {
                     Dancer::App->current->registry->universal_add($_, $r, $c)
                     for ('get', 'head')
