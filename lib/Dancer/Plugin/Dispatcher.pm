@@ -214,15 +214,15 @@ sub auto_dispatcher {
     foreach my $route (@{$cfg->{routes}}) {
         my $re = qr/([a-z,]+) *([^\s>]+) *> *(.*)/;
         my ($m, $r, $s) = $route =~ $re;
-        foreach my $m (split /,/, $m) {
-            if ($m && $r && $s) {
+        foreach my $i (split /,/, $m) {
+            if ($i && $r && $s) {
                 my $c = dispatcher(split(/[\s,]/, $s));
-                if ($m eq 'get') {
+                if ($i eq 'get') {
                     Dancer::App->current->registry->universal_add($_, $r, $c)
                     for ('get', 'head')
                 }
                 else {
-                    Dancer::App->current->registry->universal_add($m, $r, $c)
+                    Dancer::App->current->registry->universal_add($i, $r, $c)
                 }
             }
         }

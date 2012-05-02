@@ -1,0 +1,132 @@
+# NAME
+
+Dancer::Plugin::Dispatcher - Simple yet Powerful Controller Class dispatcher for Dancer
+
+# VERSION
+
+version 0.12
+
+# SYNOPSIS
+
+    use Dancer;
+    use Dancer::Plugin::Dispatcher;
+
+    get '/'          => dispatch '#index';
+    get '/login'     => dispatch '#login';
+    get '/dashboard' => dispatch '#check_session', '#dashboard';
+
+    dance;
+    
+
+    # or alternatively, define routes in your config file
+
+    use Dancer;
+    use Dancer::Plugin::Dispatcher; # in your scripts
+
+    dance;
+
+# DESCRIPTION
+
+This Dancer plugin provides a simple mechanism for dispatching code in
+controller classes which allows you to better separate and compartmentalize
+your Dancer application. This plugin is a great building block towards giving
+your Dancer application an MVC architecture.
+
+# CONFIGURATION
+
+Configuration details will be optionally grabbed from your [Dancer](http://search.cpan.org/perldoc?Dancer) config file
+although no configuration is neccessary.
+For example: 
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+
+If no configuration information is given, this plugin will attempt to use the
+calling (or main) namespace to dispatch code from. If the base option is supplied
+with the configuration, this plugin will load that class and all sub classes for
+your convenience.
+
+Alternatively, you may can specify your routes and handlers in your [Dancer](http://search.cpan.org/perldoc?Dancer)
+config file.
+
+For example: 
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+        routes:
+          - "any / > #index"
+          - "get /dashboard > #check_session,#dashboard"
+          - "get,post /login > #login"
+          - "get,post /logout > #logout"
+
+# METHODS
+
+## dispatch
+
+This method takes a shortcut and returns a coderef. The shortcut represents a
+controller and action (package and sub-routine). The coderef returned wraps that
+package and sub-routine to be executed by Dancer. The following is the shortcut
+translation map:
+
+    The '#' character is used to separate the controller and action, same as
+    RoR and Mojolicious, e.g. (controller#action).
+    
+
+    dispatch '#index'; -> Dispatches main->index or MyApp::Controller->index
+    where MyApp::Controller is the value of base in your plugin configuration.
+    
+
+    dispatch 'event#log'; -> Dispatches main::Event->log or
+    MyApp::Controller::Event->log.
+    
+
+    dispatch 'post-event#log'; -> Dispatches main::Post::Event->log or
+    MyApp::Controller::Post::Event->log.
+
+    dispatch 'post_event#log'; -> Dispatches main::PostEvent->log or
+    MyApp::Controller::PostEvent->log.
+
+Another benefit in using this plugin is a better method of chaining actions.
+The current method of chaining suggests that you create a catch-all* route
+which you then you to perform some actions then pass the request to the next
+matching route forcing you to use mega-splat and re-parse routes to find the
+next match.
+
+Chaining actions with this plugin only requires you to supply multiple shortcuts
+to the dispatch keyword:
+
+    get '/secured' => dispatch '#chkdomain', '#chksession', '#secured';
+    
+
+    sub chkdomain {
+        return undef if param(domain);
+        return 'Chain broken, domain is missing!';
+    }
+    
+
+    sub chksession {
+        return undef if session('user');
+        return redirect '/'; # maybe flash session timed-out message
+    }
+    
+
+    sub secured {
+        return 'You made it, Joy';
+    }
+
+If it isn't obvious, when chaining, the dispatch keyword takes multiple
+shortcuts and returns a coderef that will execute them sequentially. The first
+action to return content or issue a 3xx series redirect will break the chain.
+
+# AUTHOR
+
+Al Newkirk <awncorp@cpan.org>
+
+# COPYRIGHT AND LICENSE
+
+This software is copyright (c) 2010 by awncorp.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
