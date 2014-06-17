@@ -58,6 +58,17 @@ For example:
           - "get,post /login > #login"
           - "get,post /logout > #logout"
 
+In action method can have a prefix and/or a suffix. For example:
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+        prefix: do_
+        suffix: _action
+
+    get '/'          => dispatch '#index';
+    sub do_index_action { ... }
+
 =head1 METHODS
 
 =head2 dispatch
@@ -126,6 +137,8 @@ sub dispatcher {
     
     our $cfg   = config->{plugins}->{Dispatcher};
     our $base  = $cfg->{base};
+    our $prefix = $cfg->{prefix} || '';
+    our $suffix = $cfg->{suffix} || '';
     
     # check for a base class in the configuration
     if ($base) {
@@ -155,6 +168,8 @@ sub dispatcher {
         } else {
             $class = $base if $base;
         }
+        
+        $action = $prefix.$action.$suffix;
         
         # build the return code (+chain if specified)
         $code = sub {
