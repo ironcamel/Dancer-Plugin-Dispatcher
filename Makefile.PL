@@ -21,6 +21,7 @@ my %WriteMakefileArgs = (
   "NAME" => "Dancer::Plugin::Dispatcher",
   "PREREQ_PM" => {
     "Dancer" => 0
+  , "Class::Load" => 0
   },
   "VERSION" => "0.12",
   "test" => {

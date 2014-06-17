@@ -113,12 +113,11 @@ action to return content or issue a 3xx series redirect will break the chain.
 
 =cut
 
-use strict;
-use warnings;
+use Modern::Perl;
+use Carp;
 use Dancer qw/:syntax/;
 use Dancer::Plugin;
-
-our $CONTROLLERS ;
+use Class::Load qw/load_class/;
 
 # automation ... sorta
 
@@ -130,17 +129,10 @@ sub dispatcher {
     
     # check for a base class in the configuration
     if ($base) {
-        unless ($CONTROLLERS) {
-            my  $base_file = $base;
-                $base_file =~ s/::/\//gi;
-                $base_file .= '.pm';
-                
-            eval "require $base" unless $INC{$base_file};
-            $CONTROLLERS->{$base}++;
-        }
-    }
-    else {
-        ($base) = caller(1); $base ||= 'main';
+        load_class($base);
+    } else {
+        ($base) = caller(0);
+        $base ||= 'main';
     }
     
     sub BUILDCODE {
@@ -155,33 +147,24 @@ sub dispatcher {
         if ($class) {
             # run through the filters
             $class = ucfirst $class;
-            $class =~ s/([a-z])\-([a-z])/$1::\u$2/gpi;
-            $class =~ s/([a-z])\_([a-z])/$1\u$2/gpi;
+            $class =~ s{-(.)}{::\u$1}g;
+            $class =~ s{_(.)}{\u$1}g;
             
             # prepend base to class if applicable
             $class = join "::", $base, $class if $base;
-        }
-        else {
-            
+        } else {
             $class = $base if $base;
         }
         
         # build the return code (+chain if specified)
         $code = sub {
-            
-            my  $class_file = $class;
-                $class_file =~ s/::/\//gi;
-                $class_file .= '.pm';
-                
-            eval "require $class" unless $INC{$class_file};
-            $CONTROLLERS->{$class_file}++;
-            
+            load_class($class);
             debug lc "dispatching $class -> $action";
+            croak "action $action not found in class $class" unless $class->can($action);
             $class->$action(@_) if $class && $action;
         };
         
         return $code;
-    
     }
     
     my @codes = map { BUILDCODE($_) } @_;
@@ -229,7 +212,7 @@ sub auto_dispatcher {
     }
 }
 
-register dispatch       => sub { dispatcher @_ };
+register dispatch => \&dispatcher;
 
 register_plugin;
 auto_dispatcher;
