@@ -132,6 +132,8 @@ use Class::Load qw/load_class/;
 
 # automation ... sorta
 
+our $classes;
+
 sub dispatcher {
     return unless config->{plugins};
     
@@ -173,10 +175,15 @@ sub dispatcher {
         
         # build the return code (+chain if specified)
         $code = sub {
-            load_class($class);
-            debug lc "dispatching $class -> $action";
-            croak "action $action not found in class $class" unless $class->can($action);
-            $class->$action(@_) if $class && $action;
+            debug "dispatching $class -> $action";
+            if (exists $classes->{$class}) {
+                croak "action $action not found in class $class" unless $classes->{$class}->can($action);
+                $classes->{$class}->$action(@_);
+            } else {
+                load_class($class);
+                croak "action $action not found in class $class" unless $class->can($action);
+                $class->$action(@_) if $class && $action;
+            }
         };
         
         return $code;
@@ -228,6 +235,49 @@ sub auto_dispatcher {
 }
 
 register dispatch => \&dispatcher;
+
+=head2 boot_classes
+
+This methods boots specifed classes and will use them when possible. Classes are instanciated via C<new()>.
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+        boot:
+          MyApp::Controller:
+            - 1
+            - 2
+            - 3
+    
+    sub new { my ($one, $two, $three) = @_; bless ... }
+    sub index { my $self = shift; ... }
+    
+    boot_classes;
+    get '/'          => dispatch '#index';
+
+This also works great with frameworks like L<Moose>.
+
+I<boot_classes> takes optional arguments; they are the same as in the plugin configuration:
+
+    boot_classes(
+        'MyApp::Controller' => [ 1, 2, 3 ]
+    );
+
+=cut
+
+register boot_classes => sub {
+    return unless config->{plugins};
+
+    our $cfg = config->{plugins}->{Dispatcher};
+    
+    my %def = (%{$cfg->{boot}}, @_);
+    
+    foreach my $class (keys %def) {
+        load_class($class);
+        debug "instanciate class $class";
+        $classes->{$class} = $class->new(@{$def{$class}});
+    }
+};
 
 register_plugin;
 auto_dispatcher;
