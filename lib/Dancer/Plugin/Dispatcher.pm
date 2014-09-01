@@ -132,6 +132,8 @@ use Class::Load qw/load_class/;
 
 # automation ... sorta
 
+our $classes;
+
 sub dispatcher {
     return unless config->{plugins};
     
@@ -173,10 +175,15 @@ sub dispatcher {
         
         # build the return code (+chain if specified)
         $code = sub {
-            load_class($class);
-            debug lc "dispatching $class -> $action";
-            croak "action $action not found in class $class" unless $class->can($action);
-            $class->$action(@_) if $class && $action;
+            debug "dispatching $class -> $action";
+            if (exists $classes->{$class}) {
+                croak "action $action not found in class $class" unless $classes->{$class}->can($action);
+                $classes->{$class}->$action(@_);
+            } else {
+                load_class($class);
+                croak "action $action not found in class $class" unless $class->can($action);
+                $class->$action(@_) if $class && $action;
+            }
         };
         
         return $code;
@@ -228,6 +235,20 @@ sub auto_dispatcher {
 }
 
 register dispatch => \&dispatcher;
+
+register boot_classes => sub {
+    return unless config->{plugins};
+
+    our $cfg = config->{plugins}->{Dispatcher};
+    
+    my %def = (%{$cfg->{boot}}, @_);
+    
+    foreach my $class (keys %def) {
+        load_class($class);
+        debug "instanciate class $class";
+        $classes->{$class} = $class->new(@{$def{$class}});
+    }
+};
 
 register_plugin;
 auto_dispatcher;
