@@ -1,6 +1,6 @@
 #!perl
 
-use Test::More tests => 5, import => ['!pass'];
+use Test::More tests => 6, import => ['!pass'];
 use Dancer::Test;
 
 BEGIN {
@@ -20,5 +20,9 @@ response_content_is [GET => '/chainsaw'],
     
 response_content_is [GET => '/redirect'], 
     '', '/redirect returned Nothing, chain broken as expected';
+
+read_logs;
+dancer_response GET => '/error';
+like(read_logs()->[1]->{message}, qr{\Qrequest to GET /error crashed: action do_undefined_action not found in class MyApp\E});
 
 1;

@@ -20,7 +20,9 @@ my %WriteMakefileArgs = (
   "LICENSE" => "perl",
   "NAME" => "Dancer::Plugin::Dispatcher",
   "PREREQ_PM" => {
-    "Dancer" => 0
+    "Dancer" => 0,
+    "Modern::Perl" => 0,
+    "Class::Load" => 0,
   },
   "VERSION" => "0.12",
   "test" => {

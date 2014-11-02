@@ -58,6 +58,17 @@ For example:
           - "get,post /login > #login"
           - "get,post /logout > #logout"
 
+In action method can have a prefix and/or a suffix. For example:
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+        prefix: do_
+        suffix: _action
+
+    get '/'          => dispatch '#index';
+    sub do_index_action { ... }
+
 =head1 METHODS
 
 =head2 dispatch
@@ -113,34 +124,30 @@ action to return content or issue a 3xx series redirect will break the chain.
 
 =cut
 
-use strict;
-use warnings;
+use Modern::Perl;
+use Carp;
 use Dancer qw/:syntax/;
 use Dancer::Plugin;
-
-our $CONTROLLERS ;
+use Class::Load qw/load_class/;
 
 # automation ... sorta
+
+our $classes;
 
 sub dispatcher {
     return unless config->{plugins};
     
     our $cfg   = config->{plugins}->{Dispatcher};
     our $base  = $cfg->{base};
+    our $prefix = $cfg->{prefix} || '';
+    our $suffix = $cfg->{suffix} || '';
     
     # check for a base class in the configuration
     if ($base) {
-        unless ($CONTROLLERS) {
-            my  $base_file = $base;
-                $base_file =~ s/::/\//gi;
-                $base_file .= '.pm';
-                
-            eval "require $base" unless $INC{$base_file};
-            $CONTROLLERS->{$base}++;
-        }
-    }
-    else {
-        ($base) = caller(1); $base ||= 'main';
+        load_class($base);
+    } else {
+        ($base) = caller(0);
+        $base ||= 'main';
     }
     
     sub BUILDCODE {
@@ -155,33 +162,31 @@ sub dispatcher {
         if ($class) {
             # run through the filters
             $class = ucfirst $class;
-            $class =~ s/([a-z])\-([a-z])/$1::\u$2/gpi;
-            $class =~ s/([a-z])\_([a-z])/$1\u$2/gpi;
+            $class =~ s{-(.)}{::\u$1}g;
+            $class =~ s{_(.)}{\u$1}g;
             
             # prepend base to class if applicable
             $class = join "::", $base, $class if $base;
-        }
-        else {
-            
+        } else {
             $class = $base if $base;
         }
         
+        $action = $prefix.$action.$suffix;
+        
         # build the return code (+chain if specified)
         $code = sub {
-            
-            my  $class_file = $class;
-                $class_file =~ s/::/\//gi;
-                $class_file .= '.pm';
-                
-            eval "require $class" unless $INC{$class_file};
-            $CONTROLLERS->{$class_file}++;
-            
-            debug lc "dispatching $class -> $action";
-            $class->$action(@_) if $class && $action;
+            debug "dispatching $class -> $action";
+            if (exists $classes->{$class}) {
+                croak "action $action not found in class $class" unless $classes->{$class}->can($action);
+                $classes->{$class}->$action(@_);
+            } else {
+                load_class($class);
+                croak "action $action not found in class $class" unless $class->can($action);
+                $class->$action(@_) if $class && $action;
+            }
         };
         
         return $code;
-    
     }
     
     my @codes = map { BUILDCODE($_) } @_;
@@ -229,7 +234,50 @@ sub auto_dispatcher {
     }
 }
 
-register dispatch       => sub { dispatcher @_ };
+register dispatch => \&dispatcher;
+
+=head2 boot_classes
+
+This methods boots specifed classes and will use them when possible. Classes are instanciated via C<new()>.
+
+    plugins:
+      Dispatcher:
+        base: MyApp::Controller
+        boot:
+          MyApp::Controller:
+            - 1
+            - 2
+            - 3
+    
+    sub new { my ($one, $two, $three) = @_; bless ... }
+    sub index { my $self = shift; ... }
+    
+    boot_classes;
+    get '/'          => dispatch '#index';
+
+This also works great with frameworks like L<Moose>.
+
+I<boot_classes> takes optional arguments; they are the same as in the plugin configuration:
+
+    boot_classes(
+        'MyApp::Controller' => [ 1, 2, 3 ]
+    );
+
+=cut
+
+register boot_classes => sub {
+    return unless config->{plugins};
+
+    our $cfg = config->{plugins}->{Dispatcher};
+    
+    my %def = (%{$cfg->{boot}}, @_);
+    
+    foreach my $class (keys %def) {
+        load_class($class);
+        debug "instanciate class $class";
+        $classes->{$class} = $class->new(@{$def{$class}});
+    }
+};
 
 register_plugin;
 auto_dispatcher;
