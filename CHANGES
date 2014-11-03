@@ -1,6 +1,6 @@
 Changelog for Dancer-Plugin-Dispatcher
 
-0.13 2014-11-03T03:59:51
+0.13 2014-11-03T04:56:48
  - Completely refactored
  - instanciate controller classes on request
  - add Modern::Perl to prerequisites
