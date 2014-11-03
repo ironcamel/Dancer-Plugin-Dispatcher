@@ -1,4 +1,17 @@
-This file documents the revision history for the Perl library Dancer::Plugin::Dispatcher.
+Changelog for Dancer-Plugin-Dispatcher
 
-0.12 (2012-05-02)
-    * redo
+0.13 2014-11-03T03:59:51
+ - Completely refactored
+ - instanciate controller classes on request
+ - add Modern::Perl to prerequisites
+ - add prefix and suffix for action
+ - use Modern::Perl, Carp and Class::Load
+ - fixed small error, re-releasing
+ - Fixed typos and POD
+ - now supports zero-config, multi-method config routes, and lazy-loads
+   controllers
+ - adjusted tests for new functionality
+ - fixed auto-dispatch from config, no dispatch_auto command needed
+ - dispatch routes from config
+ - initial commit
+

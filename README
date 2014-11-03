@@ -1,33 +1,94 @@
 NAME
-    Dancer::Plugin::Dispatcher - Simple yet Powerful Controller Class
-    dispatcher for Dancer
+    Dancer::Plugin::Dispatcher - Controller Class Dispatching System for
+    Dancer
 
 VERSION
-    version 0.12
+    version 0.13
 
 SYNOPSIS
         use Dancer;
         use Dancer::Plugin::Dispatcher;
 
-        get '/'          => dispatch '#index';
         get '/login'     => dispatch '#login';
         get '/dashboard' => dispatch '#check_session', '#dashboard';
 
-        dance;
-    
-        # or alternatively, define routes in your config file
+        sub login {
+            halt 'Unauthorized' unless login_okay scalar params;
+            redirect '/dashboard';
+        }
 
-        use Dancer;
-        use Dancer::Plugin::Dispatcher; # in your scripts
+        sub check_session {
+            var sessions => generate_session;
+        }
+
+        sub dashboard {
+            template 'dashboard';
+        }
 
         dance;
 
 DESCRIPTION
-    This Dancer plugin provides a simple mechanism for dispatching code in
-    controller classes which allows you to better separate and
-    compartmentalize your Dancer application. This plugin is a great
-    building block towards giving your Dancer application an MVC
-    architecture.
+    Dancer::Plugin::Dispatcher provides a mechanism for dispatching HTTP
+    requests to controller classes allowing you to better separate and
+    compartmentalize your Dancer application. This simple approach is a
+    building block towards giving your Dancer application a more scalable
+    MVC architecture. Note: This is an early release available for testing
+    and feedback and as such is subject to change. The latest release of
+    this distribution breaks backwards compatibility with version 0.12 or
+    anything prior. This plugin leverages dependency injection to load the
+    objects that the HTTP requests will be dispatched to. The invesion of
+    control container is provided by Beam::Wire which supports various
+    patterns for dynamically loading controllers.
+
+METHODS
+  dispatch
+    This method takes a string, referred to as a dispatch string, and
+    returns a coderef. The dispatch string represents a controller service
+    and action. The controller service is a Beam::Wire service container
+    configuration. All controller services should be specified under the
+    services property in the plugin configuration. The controller service
+    action is a method on the object which the service loads. The following
+    are the dispatch string semantics:
+
+        plugins:
+            Dispatcher:
+                services:
+                    artists:
+                        class: MyApp::Artist
+
+        The '#' character is used to separate the controller service name and
+        action (method): e.g. (service#action).
+
+        dispatch '#index'; -> dispatches main->index or caller->index
+        where caller is the namespace of whichever package loads the plugin
+
+        dispatch 'artists#find'; # dispatches MyApp::Artist->new->find
+        dispatch 'artists#single'; # dispatches MyApp::Artist->new->single
+
+    Another benefit in using this plugin is a better method of chaining
+    actions. The current method of chaining suggests that you create a
+    catch-all* route which you then use to perform some actions then pass
+    the request to the next matching route forcing you to use mega-splat and
+    re-parse routes to find the next match.
+
+    Chaining actions with this plugin only requires you to supply multiple
+    dispatch strings to the dispatch keyword:
+
+        get '/secured' => dispatch '#check_session', '#secured';
+
+        sub chksession {
+            return redirect '/' unless session 'user';
+        }
+
+        sub secured {
+            template 'secured';
+        }
+
+    If it isn't obvious, when chaining, the dispatch keyword takes multiple
+    dispatch strings and returns a coderef that will execute them
+    sequentially. The first action to explicitly halt execution, by calling
+    Dancer's halt keyword, or issue a 3xx series redirect will break the
+    dispatch chain.
 
 CONFIGURATION
     Configuration details will be optionally grabbed from your Dancer config
@@ -35,84 +96,48 @@ CONFIGURATION
 
         plugins:
           Dispatcher:
-            base: MyApp::Controller
+            services:
+                artists:
+                    class: MyApp::Artist
+                albums:
+                    class: MyApp::Album
+                songs:
+                    class: MyApp::Song
 
     If no configuration information is given, this plugin will attempt to
-    use the calling (or main) namespace to dispatch code from. If the base
-    option is supplied with the configuration, this plugin will load that
-    class and all sub classes for your convenience.
-
-    Alternatively, you may can specify your routes and handlers in your
-    Dancer config file.
-
-    For example:
+    use the calling (or main) namespace as the controller where requests
+    will be dispatched. Controller methods can have a prefix and/or a suffix
+    automatically applied before dispatch. For example:
 
         plugins:
-          Dispatcher:
-            base: MyApp::Controller
-            routes:
-              - "any / > #index"
-              - "get /dashboard > #check_session,#dashboard"
-              - "get,post /login > #login"
-              - "get,post /logout > #logout"
+            Dispatcher:
+                prefix: do_
+                suffix: _action
+                services:
+                    artists:
+                        class: MyApp::Artist
+                    albums:
+                        class: MyApp::Album
+                    songs:
+                        class: MyApp::Song
 
-METHODS
-  dispatch
-    This method takes a shortcut and returns a coderef. The shortcut
-    represents a controller and action (package and sub-routine). The
-    coderef returned wraps that package and sub-routine to be executed by
-    Dancer. The following is the shortcut translation map:
+    The prefix and suffix values are optional and will be applied be
+    resolving the controller dispatch chain.
 
-        The '#' character is used to separate the controller and action, same as
-        RoR and Mojolicious, e.g. (controller#action).
-    
-        dispatch '#index'; -> Dispatches main->index or MyApp::Controller->index
-        where MyApp::Controller is the value of base in your plugin configuration.
-    
-        dispatch 'event#log'; -> Dispatches main::Event->log or
-        MyApp::Controller::Event->log.
-    
-        dispatch 'post-event#log'; -> Dispatches main::Post::Event->log or
-        MyApp::Controller::Post::Event->log.
+        get '/' => dispatch '#index'; # will execute do_index_action
 
-        dispatch 'post_event#log'; -> Dispatches main::PostEvent->log or
-        MyApp::Controller::PostEvent->log.
+AUTHORS
+    *   Al Newkirk <anewkirk@ana.io>
 
-    Another benefit in using this plugin is a better method of chaining
-    actions. The current method of chaining suggests that you create a
-    catch-all* route which you then you to perform some actions then pass
-    the request to the next matching route forcing you to use mega-splat and
-    re-parse routes to find the next match.
+    *   Naveed Massjouni <naveed@vt.edu>
 
-    Chaining actions with this plugin only requires you to supply multiple
-    shortcuts to the dispatch keyword:
+CONTRIBUTORS
+    *   Al Newkirk <we@ana.im>
 
-        get '/secured' => dispatch '#chkdomain', '#chksession', '#secured';
-    
-        sub chkdomain {
-            return undef if param(domain);
-            return 'Chain broken, domain is missing!';
-        }
-    
-        sub chksession {
-            return undef if session('user');
-            return redirect '/'; # maybe flash session timed-out message
-        }
-    
-        sub secured {
-            return 'You made it, Joy';
-        }
-
-    If it isn't obvious, when chaining, the dispatch keyword takes multiple
-    shortcuts and returns a coderef that will execute them sequentially. The
-    first action to return content or issue a 3xx series redirect will break
-    the chain.
-
-AUTHOR
-    Al Newkirk <awncorp@cpan.org>
+    *   David Zurborg <zurborg@cpan.org>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2010 by awncorp.
+    This software is copyright (c) 2014 by Al Newkirk.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

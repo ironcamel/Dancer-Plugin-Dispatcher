@@ -1,0 +1,12 @@
+#!/usr/bin/env perl
+
+use FindBin;
+
+my $dir = $FindBin::Bin . '/../';
+my $git = "/usr/bin/git --git-dir=$dir/.git --work-tree=$dir";
+my ($branch) = qx[$git branch] =~ /\*\s(\w+)/;
+
+my $file = $ARGV[0];
+my $link = 'https://travis-ci.org/alnewkirk/Dancer-Plugin-Dispatcher';
+$link = qq[<a href="$link"><img src="$link.svg?branch=$branch"></a>];
+qx[perl -pi -e 's{# SYNOPSIS}{# STATUS\\n\\n$link\\n\\n# SYNOPSIS}' $file];
