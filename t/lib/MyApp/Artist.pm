@@ -14,17 +14,22 @@ $services->{myapp} = {
 get '/artists/:id' =>
     dispatch 'myapp#auth', '#find', '#single';
 
-sub new {
-    bless {}, shift;
-}
+get '/artists/report/vars' =>
+    dispatch 'myapp#auth', '#find', '#single', '#report';
 
 sub find {
-    var artist => 'artist object';
+    var find_arg1 => ref shift;
+    var artist    => 'artist object';
     return;
 }
 
 sub single {
+    var single_arg1 => ref shift;
     return var 'artist';
+}
+
+sub report {
+    return join ' ', var('find_arg1'), var('single_arg1');
 }
 
 1;

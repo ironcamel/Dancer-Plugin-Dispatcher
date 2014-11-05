@@ -8,7 +8,7 @@ version 0.13
 
 # STATUS
 
-<a href="https://travis-ci.org/alnewkirk/Dancer-Plugin-Dispatcher"><img src="https://travis-ci.org/alnewkirk/Dancer-Plugin-Dispatcher.svg?branch=master"></a>
+<a href="https://travis-ci.org/ironcamel/Dancer-Plugin-Dispatcher"><img src="https://travis-ci.org/ironcamel/Dancer-Plugin-Dispatcher.svg?branch=master"></a>
 
 # SYNOPSIS
 

@@ -22,6 +22,7 @@ register dispatch => sub {
     my $handlers  = [];
 
     for my $direction (@directions) {
+        next if 'CODE' eq ref $direction;
         next if $handlers{$caller}{$direction};
 
         my ($service, $method) = split /#/, $direction;
@@ -44,18 +45,30 @@ register dispatch => sub {
     }
 
     return sub {
-        my $data; my @args = @_;
+        my @args = @_;
+        my ($data, $invocant);
         for my $direction (@directions) {
-            my $handler = $handlers{$caller}{$direction};
+            my $is_code = 'CODE' eq ref $direction;
+            my $handler = $is_code ? {} : $handlers{$caller}{$direction};
+            my $coderef = $is_code ? $direction : $handler->{code};
             my $class   = $handler->{class};
+            my $object  = $handler->{object};
             my $service = $handler->{service};
             my $method  = $handler->{method};
-            my $code    = $handler->{code};
 
-            debug "Dispatching to class ($class) and method ($method)"
-                . $service ? " using service ($service)" : "";
+            # make best effort to pass an invocant
+            if ($service or $class) {
+                $invocant = $object // $class;
+                unshift @args, $invocant if $invocant;
+                # dispatch log message
+                debug "Dispatching to class ($class) and method ($method)"
+                    . $service ? " using service ($service)" : "";
+            } else {
+                # dispatch log message
+                debug "Dispatching to anonymous inline code reference";
+            }
 
-            $data = $code->(@args);
+            $data = $coderef->(@args);
 
             # the dispatch chain will be broken and return immediately if a 3xx
             # series redirect is issued or if execution is explicitly halted
